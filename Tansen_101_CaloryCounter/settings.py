@@ -38,6 +38,10 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    # bootstrap5
+    "crispy_forms",
+    "crispy_bootstrap5",
+
     # my apps
     'CalorieCounter'
 ]
@@ -119,5 +123,16 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# media settings
+MEDIA_URL='media/'
+MEDIA_ROOT=BASE_DIR/'media/'
+
 # auth model (app_name.model_name)
 AUTH_USER_MODEL='CalorieCounter.User'
+
+# bootstrap5
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"
+
+# login redirect for decorator
+LOGIN_URL = 'login_page'

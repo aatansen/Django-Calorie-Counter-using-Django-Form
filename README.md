@@ -16,6 +16,14 @@
     - [Database Migrations](#database-migrations)
     - [Superuser Create](#superuser-create)
     - [Create Django Forms](#create-django-forms)
+    - [Templates Setup](#templates-setup)
+    - [User Authentication](#user-authentication)
+    - [Dashboard](#dashboard)
+    - [Profile](#profile)
+    - [Update Profile](#update-profile)
+    - [Add and Update Calories](#add-and-update-calories)
+    - [Show All Added Calories](#show-all-added-calories)
+    - [Delete Added Calories](#delete-added-calories)
 
 ## Question
 
@@ -302,6 +310,273 @@
 
     - Using this form user will add their consumed foods each time they eat
     - `consumed_by` is the relationship in the model so it is excluded and will be handle in [views.py](./CalorieCounter/views.py)
+
+---
+[⬆️ Go to Context](#context)
+
+### Templates Setup
+
+- Create all the HTML files
+
+  ```txt
+  📁 templates
+  ├── 📁 master
+  │   ├── 🌐 base-form.html
+  │   ├── 🌐 base.html
+  │   ├── 🌐 message.html
+  │   └── 🌐 nav.html
+  ├── 🌐 calorie-list.html
+  ├── 🌐 dashboard.html
+  └── 🌐 profile.html
+  ```
+
+  - We are using single [base-form.html](./CalorieCounter/templates/master/base-form.html) for every form we defined in [forms.py](./CalorieCounter/forms.py)
+
+- Make sure to use crispy form in the [base-form.html](./CalorieCounter/templates/master/base-form.html)
+
+---
+[⬆️ Go to Context](#context)
+
+### User Authentication
+
+- For registration
+  - Create function in [views.py](./CalorieCounter/views.py)
+
+    ```py
+    def register_page(request):
+        if request.method == 'POST':
+            form_data = RegistrationForm(request.POST)
+            if form_data.is_valid():
+                form_data.save()
+                messages.success(request, 'Registration Successfully')
+                return redirect('login_page')
+        form_data = RegistrationForm()
+        context = {
+            "form_data": form_data,
+            'form_title': 'User Registration Form',
+            'form_btn': 'Register'
+        }
+        return render(request, 'master/base-form.html',context)
+    ```
+
+    - Make sure [base-form.html](./CalorieCounter/templates/master/base-form.html) has `csrf torken` and `method="POST" enctype="multipart/form-data"`
+
+  - Add URL pattern in [urls.py](./CalorieCounter/urls.py)
+
+- For login
+  - Create function in [views.py](./CalorieCounter/views.py)
+
+    ```py
+    def login_page(request):
+        if request.method == 'POST':
+            form_data = LoginForm(request, request.POST)
+            if form_data.is_valid():
+                user = form_data.get_user()
+                login(request, user)
+                messages.success(request, 'Login Successfully')
+                return redirect('dashboard_page')
+
+        form_data = LoginForm()
+        context = {
+            'form_data': form_data,
+            'form_title': 'User Login Form',
+            'form_btn': 'Login'
+        }
+        return render(request, 'master/base-form.html', context)
+    ```
+
+    - In here we used `get_user()` from the form data
+
+  - Add URL pattern in [urls.py](./CalorieCounter/)
+
+- Do the same for `logout_page` function
+
+---
+[⬆️ Go to Context](#context)
+
+### Dashboard
+
+- Just render it for first time, later we will update (first user need to update their profile and add calories then we will update this dashboard)
+- Update as follows
+
+  ```py
+  @login_required
+  def dashboard_page(request):
+      try:
+          current_user = request.user
+          bmr = round(request.user.user_info.bmr, 2)
+      except:
+          current_user = None
+          bmr = 0
+
+      today = date.today()
+      today_consumed_data = ConsumedCalories.objects.filter(
+          consumed_by=current_user,
+          created_at=today
+      )
+      total_consumed_calories = today_consumed_data.aggregate(
+          total_caloire=Sum('calorie'),
+          total_count=Count('calorie')
+      )
+      total_caloire = total_consumed_calories['total_caloire']
+      less_more = bmr - total_caloire
+
+      if bmr > total_caloire:
+          suggestion = 'Eat more'
+      else:
+          suggestion = 'Eat less'
+
+      context = {
+          'required_calories': bmr,
+          'today_consumed_data': today_consumed_data,
+          'consumed_calories': total_caloire,
+          'total_count': total_consumed_calories['total_count'],
+          'less_more': less_more,
+          'suggestion': suggestion,
+
+      }
+
+      return render(request, 'dashboard.html', context)
+  ```
+
+  - We used `aggregate` for calculation in the query
+    - First we filter based on user and the day user consumed those foods then we use `aggregate` to do some calculation which are imported by `from django.db.models import Sum, Count`
+
+---
+[⬆️ Go to Context](#context)
+
+### Profile
+
+- Just render this page
+- We will access all data using `related_name`
+
+---
+[⬆️ Go to Context](#context)
+
+### Update Profile
+
+- Render the following views
+
+  ```py
+  @login_required
+  def update_profile(request):
+      try:
+          current_user = request.user.user_info
+      except:
+          current_user = None
+
+      if request.method == 'POST':
+          form_data = ProfileUpdateForm(request.POST, instance=current_user)
+          if form_data.is_valid():
+              data = form_data.save(commit=False)
+              data.user = request.user
+
+              weight = data.weight
+              height = data.height
+              age = data.age
+              if data.gender == 'Male':
+                  # BMR= 66.47+(13.75 x weight in kg) + (5.003 x height in cm) - (6.755 x age in years)
+                  bmr_calculate = 66.47 + (13.75 * weight) + (5.003 * height) - (6.755 * age)
+              else:
+                  # BMR=655.1+(9.563 x weight in kg)+(1.850 xheight in cm) - (4.676 x age in years)
+                  bmr_calculate = 655.1 + (9.563 * weight) + (1.850 * height) - (4.676 * age)
+
+              data.bmr = bmr_calculate
+              data.save()
+              messages.success(request, 'Profile UPdate Successfully')
+              return redirect('profile_page')
+
+      form_data = ProfileUpdateForm(instance=current_user)
+      context = {
+          'form_data': form_data,
+          'form_title': "Update Profile Info",
+          'form_btn': 'Update'
+      }
+      return render(request, 'master/base-form.html', context)
+  ```
+
+  - In here we used `commit=False` to calculate and assigning the field which we excluded in [forms.py](./CalorieCounter/forms.py)
+
+---
+[⬆️ Go to Context](#context)
+
+### Add and Update Calories
+
+- Both are using same HTML base form
+
+  ```py
+  def add_calorie(request):
+      if request.method == 'POST':
+          form_data = ConsumedCalorieForm(request.POST)
+          if form_data.is_valid():
+              data = form_data.save(commit=False)
+              data.consumed_by = request.user
+              data.save()
+              messages.success(request, 'Successfully')
+              return redirect('consumed_calories_list')
+      form_data = ConsumedCalorieForm()
+      context = {
+          'form_data': form_data,
+          'form_title': "Add Calorie Info",
+          'form_btn': 'Add Calorie'
+      }
+      return render(request, 'master/base-form.html', context)
+
+
+  def update_calorie(request, id):
+      try:
+          data = ConsumedCalories.objects.get(id=id)
+      except:
+          data = None
+      if request.method == 'POST':
+          form_data = ConsumedCalorieForm(request.POST, instance=data)
+          if form_data.is_valid():
+              data = form_data.save(commit=False)
+              data.consumed_by = request.user
+              data.save()
+              messages.success(request, 'Successfully')
+              return redirect('consumed_calories_list')
+      form_data = ConsumedCalorieForm(instance=data)
+      context = {
+          'form_data': form_data,
+          'form_title': "UPdate Calorie Info",
+          'form_btn': 'UPdate Calorie'
+      }
+      return render(request, 'master/base-form.html', context)
+  ```
+
+---
+[⬆️ Go to Context](#context)
+
+### Show All Added Calories
+
+  ```py
+  def consumed_calories_list(request):
+      consumed_data = ConsumedCalories.objects.filter(consumed_by=request.user)
+
+      context = {
+          'consumed_data': consumed_data
+      }
+
+      return render(request, 'calorie-list.html', context)
+  ```
+
+---
+[⬆️ Go to Context](#context)
+
+### Delete Added Calories
+
+  ```py
+  def delete_calorie(request, id):
+      try:
+          data = ConsumedCalories.objects.get(id=id)
+          data.delete()
+          messages.success(request, 'Successfully')
+      except:
+          data = None
+          messages.success(request, 'Not Successful')
+      return redirect('consumed_calories_list')
+  ```
 
 ---
 [⬆️ Go to Context](#context)
