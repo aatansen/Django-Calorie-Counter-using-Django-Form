@@ -15,6 +15,7 @@
     - [Register Models in Admin](#register-models-in-admin)
     - [Database Migrations](#database-migrations)
     - [Superuser Create](#superuser-create)
+    - [Create Django Forms](#create-django-forms)
 
 ## Question
 
@@ -228,6 +229,79 @@
   ```sh
   py manage.py createsuperuser
   ```
+
+---
+[⬆️ Go to Context](#context)
+
+### Create Django Forms
+
+- Create a file [forms.py](./CalorieCounter/forms.py) and create django forms in it
+
+  - `RegistrationForm` and `LoginForm`
+
+    ```py
+
+    from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+
+    # user creation form
+    class RegistrationForm(UserCreationForm):
+        class Meta:
+            model = User
+            fields = ['username', 'email', 'password1', 'password2']
+
+    # authentication form
+    class LoginForm(AuthenticationForm):
+        pass
+    ```
+
+    - Both form is based on our custom user model which we named `User` in [models.py](./CalorieCounter/models.py)
+    - Here `password1` and `password2` in register page one is password and another is confirm password
+    - Comment this part in [settings.py](./Tansen_101_CaloryCounter/settings.py) to skip default validation
+
+      ```py
+      # AUTH_PASSWORD_VALIDATORS = [
+      #     {
+      #         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+      #     },
+      #     {
+      #         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+      #     },
+      #     {
+      #         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+      #     },
+      #     {
+      #         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+      #     },
+      # ]
+      ```
+
+  - `ProfileUpdateForm`
+
+    ```py
+    # profile form
+    class ProfileUpdateForm(forms.ModelForm):
+        class Meta:
+            model = BasicInfoModel
+            fields = '__all__'
+            exclude = ['user', 'bmr']
+    ```
+
+    - We named it update profile cause after account creation user will update their profile
+    - The excluded two fields will be handle in [views.py](./CalorieCounter/views.py)
+
+  - `ConsumedCalorieForm`
+
+    ```py
+    # calorie form
+    class ConsumedCalorieForm(forms.ModelForm):
+        class Meta:
+            model = ConsumedCalories
+            fields = '__all__'
+            exclude = ['consumed_by']
+    ```
+
+    - Using this form user will add their consumed foods each time they eat
+    - `consumed_by` is the relationship in the model so it is excluded and will be handle in [views.py](./CalorieCounter/views.py)
 
 ---
 [⬆️ Go to Context](#context)
