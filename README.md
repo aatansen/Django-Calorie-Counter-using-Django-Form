@@ -8,6 +8,8 @@
 
 - [Context](#context)
   - [Question](#question)
+  - [Solution](#solution)
+    - [Virtual Environment Setup](#virtual-environment-setup)
 
 ## Question
 
@@ -37,6 +39,31 @@
   - Run migration to create the data tables.
   - Create a superuser. (`username`: `admin`, `password`: `1234`)
   - Register your models to the Django admin.
+
+---
+[⬆️ Go to Context](#context)
+
+## Solution
+
+### Virtual Environment Setup
+
+- Create virtual environment
+
+  ```sh
+  py -m venv .venv
+  ```
+
+- Activate virtual environment
+
+  ```sh
+  .venv\Scripts\activate.bat
+  ```
+
+- Install required packages
+
+  ```sh
+  pip install django pillow crispy-bootstrap5
+  ```
 
 ---
 [⬆️ Go to Context](#context)
